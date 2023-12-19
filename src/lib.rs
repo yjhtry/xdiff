@@ -1,8 +1,10 @@
 /// This module contains the main functionality of the `xdiff` library.
 pub mod cli;
 pub mod config;
+pub mod req;
 
-pub use config::{DiffConfig, DiffProfile, RequestProfile, ResponseProfile};
+pub use config::{DiffConfig, DiffProfile, ResponseProfile};
+pub use req::RequestProfile;
 
 /// Represents additional arguments for the `xdiff` library.
 #[derive(Debug)]

@@ -1,11 +1,9 @@
 use anyhow::Result;
-use http::{HeaderMap, Method};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;
-use url::Url;
 
-use crate::ExtraArgs;
+use crate::{ExtraArgs, RequestProfile};
 
 /// Represents the configuration for performing diffs.
 #[derive(Debug, Deserialize, Serialize)]
@@ -80,24 +78,6 @@ impl DiffProfile {
 
         Ok("".to_string())
     }
-}
-
-/// Represents a request profile.
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct RequestProfile {
-    pub url: Url,
-    #[serde(with = "http_serde::method", default)]
-    pub method: Method,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub params: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub body: Option<serde_json::Value>,
-    #[serde(
-        with = "http_serde::header_map",
-        skip_serializing_if = "HeaderMap::is_empty",
-        default
-    )]
-    pub headers: HeaderMap,
 }
 
 /// Represents a response profile.
