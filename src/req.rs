@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
-    Client, Method,
+    Client, Method, Response,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -29,33 +29,80 @@ pub struct RequestProfile {
     pub headers: HeaderMap,
 }
 
+#[derive(Debug)]
+pub struct ResponseExt(Response);
+
+impl ResponseExt {
+    pub async fn filter_text(
+        self,
+        skip_headers: &[String],
+        skip_body: &[String],
+    ) -> Result<String> {
+        let mut output = String::new();
+        let headers = self.0.headers().clone();
+
+        for key in headers.keys() {
+            if !skip_headers.contains(&key.to_string()) {
+                output.push_str(&format!("{}: {}\n", key, headers[key].to_str()?));
+            }
+        }
+
+        let is_json_content_type = headers
+            .get("content-type")
+            .map_or(false, |v| v.to_str().unwrap().contains("application/json"));
+
+        if !is_json_content_type {
+            let text = self.0.text().await?;
+            output.push_str(&text);
+
+            Ok(output)
+        } else {
+            let text = self.0.text().await?;
+            let mut body = serde_json::from_str::<serde_json::Value>(&text)?;
+
+            if let Some(mut_body) = body.as_object_mut() {
+                for key in skip_body {
+                    mut_body.remove(key);
+                }
+            }
+            output.push_str(&serde_json::to_string_pretty(&body)?);
+            Ok(output)
+        }
+    }
+}
+
 impl RequestProfile {
-    pub async fn send(&self, extra: &ExtraArgs) -> Result<()> {
-        let (headers, body, query) = self.generate(&extra).await?;
+    pub async fn send(&self, extra: &ExtraArgs) -> Result<ResponseExt> {
+        let (headers, body, query) = self.generate(&extra)?;
 
         let client = Client::new();
 
         let request = client
             .request(self.method.clone(), self.url.clone())
-            .headers(self.headers.clone())
-            .query(&extra.query)
+            .headers(headers)
+            .body(body)
+            .query(&query)
             .build()?;
 
         let res = client.execute(request).await?;
 
-        let text = res.text().await?;
-        println!("{:#?}", text);
-
-        Ok(())
+        Ok(ResponseExt(res))
     }
 
-    pub async fn generate<'a>(
+    pub fn generate<'a>(
         &self,
         extra: &'a ExtraArgs,
-    ) -> Result<(HeaderMap, serde_json::Value, serde_json::Value)> {
+    ) -> Result<(HeaderMap, String, serde_json::Value)> {
         let mut headers: HeaderMap = self.headers.clone();
         let mut body = self.body.clone().unwrap_or_else(|| json!({}));
         let mut query = self.params.clone().unwrap_or_else(|| json!({}));
+
+        if headers.get("content-type").is_none() {
+            headers.insert(
+                HeaderName::from_str("content-type")?,
+                HeaderValue::from_str("application/json")?,
+            );
+        }
 
         for (key, value) in &extra.headers {
             headers.insert(HeaderName::from_str(key)?, HeaderValue::from_str(value)?);
@@ -69,8 +116,19 @@ impl RequestProfile {
             query[key] = json!(value);
         }
 
-        println!("{:#?}", query);
+        let content_type = headers.get("content-type").unwrap();
 
-        Ok((headers, body, query))
+        match content_type.to_str()? {
+            "application/json" => {
+                body = serde_json::to_value(&body)?;
+                return Ok((headers, body.to_string(), query));
+            }
+            "application/x-www-form-urlencoded" => {
+                let body = serde_urlencoded::to_string(&body)?;
+                return Ok((headers, body, query));
+            }
+
+            _ => panic!("Unsupported content type: {:?}", content_type),
+        }
     }
 }

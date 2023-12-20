@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;
 
-use crate::{ExtraArgs, RequestProfile};
+use crate::{console::log, ExtraArgs, RequestProfile};
 
 /// Represents the configuration for performing diffs.
 #[derive(Debug, Deserialize, Serialize)]
@@ -13,42 +13,15 @@ pub struct DiffConfig {
 }
 
 impl DiffConfig {
-    /// Loads the diff configuration from a YAML file.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The path to the YAML file.
-    ///
-    /// # Returns
-    ///
-    /// The loaded `DiffConfig` if successful, otherwise an `anyhow::Error`.
     pub async fn load_yaml(path: &str) -> Result<Self> {
         let content = fs::read_to_string(path).await?;
         Self::from_str(&content)
     }
 
-    /// Creates a `DiffConfig` from a YAML string.
-    ///
-    /// # Arguments
-    ///
-    /// * `content` - The YAML string representing the diff configuration.
-    ///
-    /// # Returns
-    ///
-    /// The created `DiffConfig` if successful, otherwise an `anyhow::Error`.
     pub fn from_str(content: &str) -> Result<Self> {
         Ok(serde_yaml::from_str(content)?)
     }
 
-    /// Retrieves a diff profile by name.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The name of the diff profile.
-    ///
-    /// # Returns
-    ///
-    /// The diff profile if found, otherwise `None`.
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
         self.profiles.get(name)
     }
@@ -63,24 +36,18 @@ pub struct DiffProfile {
 }
 
 impl DiffProfile {
-    /// Performs a diff operation using the specified arguments.
-    ///
-    /// # Arguments
-    ///
-    /// * `_args` - The diff arguments.
-    ///
-    /// # Returns
-    ///
-    /// The diff result as a string if successful, otherwise an `anyhow::Error`.
     pub async fn diff(&self, args: ExtraArgs) -> Result<String> {
         let res1 = self.request1.send(&args).await?;
-        // let res2 = self.request2.send(&args).await?;
+        let res2 = self.request2.send(&args).await?;
 
-        // let text1 = res1.filter_text(&self.response.skip_headers, &self.response.skip_body);
-        // let text2 = res2.filter_text(&self.response.skip_headers, &self.response.skip_body);
+        let text1 = res1
+            .filter_text(&self.response.skip_headers, &self.response.skip_body)
+            .await?;
+        let text2 = res2
+            .filter_text(&self.response.skip_headers, &self.response.skip_body)
+            .await?;
 
-        // println!("{:#?}", self);
-        // println!("{:#?}", args);
+        log(text1, text2);
 
         Ok("".to_string())
     }

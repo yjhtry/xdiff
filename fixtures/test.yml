@@ -10,6 +10,8 @@ todo:
   response:
     skip_headers:
       - report-to
+    skip_body:
+      - id
 rust:
   request1:
     method: GET
@@ -27,4 +29,5 @@ rust:
       - set-cookie
       - date
       - via
+      - x-cache
       - x-amz-cf-id
