@@ -73,8 +73,14 @@ impl DiffProfile {
     ///
     /// The diff result as a string if successful, otherwise an `anyhow::Error`.
     pub async fn diff(&self, args: ExtraArgs) -> Result<String> {
-        println!("{:#?}", self);
-        println!("{:#?}", args);
+        let res1 = self.request1.send(&args).await?;
+        // let res2 = self.request2.send(&args).await?;
+
+        // let text1 = res1.filter_text(&self.response.skip_headers, &self.response.skip_body);
+        // let text2 = res2.filter_text(&self.response.skip_headers, &self.response.skip_body);
+
+        // println!("{:#?}", self);
+        // println!("{:#?}", args);
 
         Ok("".to_string())
     }

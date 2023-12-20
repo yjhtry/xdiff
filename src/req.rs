@@ -30,13 +30,22 @@ pub struct RequestProfile {
 }
 
 impl RequestProfile {
-    pub async fn send(&self, extra: ExtraArgs) -> Result<()> {
+    pub async fn send(&self, extra: &ExtraArgs) -> Result<()> {
         let (headers, body, query) = self.generate(&extra).await?;
 
-        let res = Client::new()
+        let client = Client::new();
+
+        let request = client
             .request(self.method.clone(), self.url.clone())
             .headers(self.headers.clone())
-            .query(&extra.query);
+            .query(&extra.query)
+            .build()?;
+
+        let res = client.execute(request).await?;
+
+        let text = res.text().await?;
+        println!("{:#?}", text);
+
         Ok(())
     }
 
@@ -53,12 +62,14 @@ impl RequestProfile {
         }
 
         for (key, value) in &extra.body {
-            body[key] = value.parse()?;
+            body[key] = json!(value);
         }
 
         for (key, value) in &extra.query {
-            query[key] = value.parse()?;
+            query[key] = json!(value);
         }
+
+        println!("{:#?}", query);
 
         Ok((headers, body, query))
     }

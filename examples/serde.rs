@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename = "request1")]
 struct Paging {
     page_number: usize,
     page_size: usize,
@@ -25,4 +27,15 @@ fn main() {
     println!("{}", json);
     let req: Request = serde_json::from_str(&json).unwrap();
     println!("{:?}", req);
+
+    let mut json = json!({
+        "name": "JiangBo",
+        "paging": {
+            "page_number": 4,
+            "page_size": 44
+        }
+    });
+
+    json["name"] = json!("john");
+    println!("{} \n{}", json["name"], json.to_string());
 }
