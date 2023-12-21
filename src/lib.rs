@@ -1,8 +1,8 @@
 /// This module contains the main functionality of the `xdiff` library.
 pub mod cli;
 pub mod config;
-pub mod console;
 pub mod req;
+pub mod utils;
 
 pub use config::{DiffConfig, DiffProfile, ResponseProfile};
 pub use req::RequestProfile;

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;
 
-use crate::{console::log, ExtraArgs, RequestProfile};
+use crate::{utils::text_diff, ExtraArgs, RequestProfile};
 
 /// Represents the configuration for performing diffs.
 #[derive(Debug, Deserialize, Serialize)]
@@ -47,9 +47,7 @@ impl DiffProfile {
             .filter_text(&self.response.skip_headers, &self.response.skip_body)
             .await?;
 
-        log(text1, text2);
-
-        Ok("".to_string())
+        text_diff(text1, text2)
     }
 }
 

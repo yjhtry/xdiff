@@ -1,9 +1,10 @@
-use std::fmt;
+use std::fmt::{self, Write};
 
+use anyhow::Result;
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
 
-pub struct Line(Option<usize>);
+struct Line(Option<usize>);
 
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -14,12 +15,13 @@ impl fmt::Display for Line {
     }
 }
 
-pub fn log(old: String, new: String) {
-    let diff = TextDiff::from_lines(&old, &new);
+pub fn text_diff(text1: String, text2: String) -> Result<String> {
+    let mut output = String::new();
+    let diff = TextDiff::from_lines(&text1, &text2);
 
     for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
         if idx > 0 {
-            println!("{:-^1$}", "-", 80);
+            writeln!(&mut output, "{:-^1$}", "-", 80)?;
         }
         for op in group {
             for change in diff.iter_inline_changes(op) {
@@ -28,23 +30,26 @@ pub fn log(old: String, new: String) {
                     ChangeTag::Insert => ("+", Style::new().green()),
                     ChangeTag::Equal => (" ", Style::new().dim()),
                 };
-                print!(
+                write!(
+                    &mut output,
                     "{}{} |{}",
                     style(Line(change.old_index())).dim(),
                     style(Line(change.new_index())).dim(),
                     s.apply_to(sign).bold(),
-                );
+                )?;
                 for (emphasized, value) in change.iter_strings_lossy() {
                     if emphasized {
-                        print!("{}", s.apply_to(value).underlined().on_black());
+                        write!(&mut output, "{}", s.apply_to(value).underlined().on_black())?;
                     } else {
-                        print!("{}", s.apply_to(value));
+                        write!(&mut output, "{}", s.apply_to(value))?;
                     }
                 }
                 if change.missing_newline() {
-                    println!();
+                    writeln!(&mut output)?;
                 }
             }
         }
     }
+
+    Ok(output)
 }

@@ -10,6 +10,7 @@ todo:
   response:
     skip_headers:
       - report-to
+      - etag
     skip_body:
       - id
 rust:

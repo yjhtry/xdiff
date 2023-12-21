@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::str::FromStr;
 
 /// Represents a request profile.
@@ -41,11 +42,15 @@ impl ResponseExt {
         let mut output = String::new();
         let headers = self.0.headers().clone();
 
+        writeln!(&mut output, "{:?} {}", self.0.version(), self.0.status())?;
+
         for key in headers.keys() {
             if !skip_headers.contains(&key.to_string()) {
-                output.push_str(&format!("{}: {}\n", key, headers[key].to_str()?));
+                writeln!(&mut output, "{}: {}", key, headers[key].to_str()?)?;
             }
         }
+
+        writeln!(&mut output)?;
 
         let is_json_content_type = headers
             .get("content-type")
@@ -53,7 +58,7 @@ impl ResponseExt {
 
         if !is_json_content_type {
             let text = self.0.text().await?;
-            output.push_str(&text);
+            writeln!(&mut output, "{}", text)?;
 
             Ok(output)
         } else {
@@ -65,7 +70,9 @@ impl ResponseExt {
                     mut_body.remove(key);
                 }
             }
-            output.push_str(&serde_json::to_string_pretty(&body)?);
+
+            writeln!(&mut output, "{}", &serde_json::to_string_pretty(&body)?)?;
+
             Ok(output)
         }
     }

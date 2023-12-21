@@ -1,3 +1,5 @@
+use std::io::{stdout, Write};
+
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use xdiff::{
@@ -29,7 +31,11 @@ async fn run(args: RunArgs) -> Result<()> {
     })?;
     let extra_args = ExtraArgs::from(args.extra_params);
 
-    profile.diff(extra_args).await?;
+    let output = profile.diff(extra_args).await?;
+
+    let mut stdout = stdout().lock();
+
+    stdout.write_all(output.as_bytes())?;
 
     Ok(())
 }
