@@ -41,10 +41,10 @@ impl DiffProfile {
         let res2 = self.request2.send(&args).await?;
 
         let text1 = res1
-            .filter_text(&self.response.skip_headers, &self.response.skip_body)
+            .get_text(&self.response.skip_headers, &self.response.skip_body)
             .await?;
         let text2 = res2
-            .filter_text(&self.response.skip_headers, &self.response.skip_body)
+            .get_text(&self.response.skip_headers, &self.response.skip_body)
             .await?;
 
         text_diff(text1, text2)

@@ -34,25 +34,11 @@ pub struct RequestProfile {
 pub struct ResponseExt(Response);
 
 impl ResponseExt {
-    pub async fn filter_text(
-        self,
-        skip_headers: &[String],
-        skip_body: &[String],
-    ) -> Result<String> {
-        let mut output = String::new();
-        let headers = self.0.headers().clone();
-
-        writeln!(&mut output, "{:?} {}", self.0.version(), self.0.status())?;
-
-        for key in headers.keys() {
-            if !skip_headers.contains(&key.to_string()) {
-                writeln!(&mut output, "{}: {}", key, headers[key].to_str()?)?;
-            }
-        }
-
-        writeln!(&mut output)?;
-
-        let is_json_content_type = headers
+    pub async fn get_text(self, skip_headers: &[String], skip_body: &[String]) -> Result<String> {
+        let mut output = self.get_header_text(skip_headers)?;
+        let is_json_content_type = self
+            .0
+            .headers()
             .get("content-type")
             .map_or(false, |v| v.to_str().unwrap().contains("application/json"));
 
@@ -75,6 +61,23 @@ impl ResponseExt {
 
             Ok(output)
         }
+    }
+
+    pub fn get_header_text(&self, skip_headers: &[String]) -> Result<String> {
+        let mut output = String::new();
+        let headers = self.0.headers().clone();
+
+        writeln!(&mut output, "{:?} {}", self.0.version(), self.0.status())?;
+
+        for key in headers.keys() {
+            if !skip_headers.contains(&key.to_string()) {
+                writeln!(&mut output, "{}: {}", key, headers[key].to_str()?)?;
+            }
+        }
+
+        writeln!(&mut output)?;
+
+        Ok(output)
     }
 }
 
