@@ -30,6 +30,30 @@ pub struct RequestProfile {
     pub headers: HeaderMap,
 }
 
+impl RequestProfile {
+    pub fn validate(&self) -> Result<()> {
+        if let Some(params) = &self.params {
+            if !params.is_object() {
+                return Err(anyhow::anyhow!(
+                    "Params must be an object but got \n{}",
+                    serde_yaml::to_string(params)?
+                ));
+            }
+        }
+
+        if let Some(body) = &self.body {
+            if !body.is_object() {
+                return Err(anyhow::anyhow!(
+                    "Body must be an object. \n{}",
+                    serde_yaml::to_string(body)?
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct ResponseExt(Response);
 

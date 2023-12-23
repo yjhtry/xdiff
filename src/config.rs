@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;
@@ -19,11 +19,24 @@ impl DiffConfig {
     }
 
     pub fn from_str(content: &str) -> Result<Self> {
-        Ok(serde_yaml::from_str(content)?)
+        let profiles: Self = serde_yaml::from_str(content)?;
+
+        profiles.validate()?;
+        Ok(profiles)
     }
 
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
         self.profiles.get(name)
+    }
+
+    pub(crate) fn validate(&self) -> Result<()> {
+        for (name, profile) in &self.profiles {
+            profile
+                .validate()
+                .context(format!("failed to validate profile: {}", name))?;
+        }
+
+        Ok(())
     }
 }
 
@@ -32,7 +45,12 @@ impl DiffConfig {
 pub struct DiffProfile {
     pub request1: RequestProfile,
     pub request2: RequestProfile,
+    #[serde(skip_serializing_if = "is_default", default)]
     pub response: ResponseProfile,
+}
+
+fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    value == &T::default()
 }
 
 impl DiffProfile {
@@ -49,10 +67,21 @@ impl DiffProfile {
 
         text_diff(text1, text2)
     }
+
+    pub fn validate(&self) -> Result<()> {
+        self.request1
+            .validate()
+            .context("request1 failed to validate")?;
+        self.request2
+            .validate()
+            .context("request2 failed to validate")?;
+
+        Ok(())
+    }
 }
 
 /// Represents a response profile.
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, Eq)]
 pub struct ResponseProfile {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub skip_headers: Vec<String>,
