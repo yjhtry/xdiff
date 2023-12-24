@@ -13,6 +13,14 @@ pub struct DiffConfig {
 }
 
 impl DiffConfig {
+    pub fn new(lists: Vec<(String, DiffProfile)>) -> Self {
+        let mut profiles = HashMap::new();
+        for (name, profile) in lists {
+            profiles.insert(name, profile);
+        }
+
+        Self { profiles }
+    }
     pub async fn load_yaml(path: &str) -> Result<Self> {
         let content = fs::read_to_string(path).await?;
         Self::from_str(&content)
@@ -54,6 +62,17 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 }
 
 impl DiffProfile {
+    pub fn new(
+        request1: RequestProfile,
+        request2: RequestProfile,
+        skip_headers: Vec<String>,
+    ) -> Self {
+        Self {
+            request1,
+            request2,
+            response: ResponseProfile::new(skip_headers, vec![]),
+        }
+    }
     pub async fn diff(&self, args: ExtraArgs) -> Result<String> {
         let res1 = self.request1.send(&args).await?;
         let res2 = self.request2.send(&args).await?;
@@ -87,4 +106,13 @@ pub struct ResponseProfile {
     pub skip_headers: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub skip_body: Vec<String>,
+}
+
+impl ResponseProfile {
+    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
+        Self {
+            skip_headers,
+            skip_body,
+        }
+    }
 }

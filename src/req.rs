@@ -31,6 +31,21 @@ pub struct RequestProfile {
 }
 
 impl RequestProfile {
+    pub fn new(
+        url: Url,
+        method: Method,
+        params: Option<serde_json::Value>,
+        body: Option<serde_json::Value>,
+        headers: HeaderMap,
+    ) -> Self {
+        RequestProfile {
+            url,
+            method,
+            params,
+            body,
+            headers,
+        }
+    }
     pub fn validate(&self) -> Result<()> {
         if let Some(params) = &self.params {
             if !params.is_object() {
@@ -51,6 +66,28 @@ impl RequestProfile {
         }
 
         Ok(())
+    }
+}
+
+impl FromStr for RequestProfile {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let url = Url::parse(s)?;
+        let qs = url.query_pairs().collect::<Vec<_>>();
+
+        let mut params = json!({});
+        for (key, value) in qs {
+            params[&*key] = json!(value);
+        }
+
+        Ok(RequestProfile::new(
+            url,
+            Method::GET,
+            Some(params),
+            None,
+            HeaderMap::new(),
+        ))
     }
 }
 

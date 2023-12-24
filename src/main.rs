@@ -2,9 +2,10 @@ use std::io::{stdout, Write};
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use xdiff::{
     cli::{Action, Args, RunArgs},
-    DiffConfig, ExtraArgs,
+    DiffConfig, DiffProfile, ExtraArgs, RequestProfile,
 };
 
 #[tokio::main]
@@ -13,8 +14,47 @@ async fn main() -> Result<()> {
 
     match args.action {
         Action::Run(args) => run(args).await?,
+        Action::Parse(_) => parse().await?,
         _ => panic!("Unsupported action"),
     }
+
+    Ok(())
+}
+
+async fn parse() -> Result<()> {
+    let theme = ColorfulTheme::default();
+    let url1: String = Input::with_theme(&theme)
+        .with_prompt("Please enter url1")
+        .interact_text()?;
+
+    let url2: String = Input::with_theme(&theme)
+        .with_prompt("Please enter url2")
+        .interact_text()?;
+
+    let profile_name: String = Input::with_theme(&theme)
+        .with_prompt("Please enter profile name")
+        .interact_text()?;
+
+    let header_options = ["set-cookie", "date", "via", "x-cache", "x-amz-cf-id"];
+    let chosen = MultiSelect::with_theme(&theme)
+        .with_prompt("Choose headers to skip")
+        .items(&header_options)
+        .interact()?;
+
+    let skip_headers = chosen
+        .iter()
+        .map(|&i| header_options[i].to_string())
+        .collect::<Vec<_>>();
+
+    let req1: RequestProfile = url1.parse()?;
+    let req2: RequestProfile = url2.parse()?;
+    let profile = DiffProfile::new(req1, req2, skip_headers);
+    let config: DiffConfig = DiffConfig::new(vec![(profile_name, profile)]);
+
+    let output = serde_yaml::to_string(&config)?;
+
+    let mut stdout = stdout().lock();
+    writeln!(stdout, "{}", output)?;
 
     Ok(())
 }

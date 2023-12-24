@@ -15,7 +15,11 @@ pub struct Args {
 #[non_exhaustive]
 pub enum Action {
     Run(RunArgs),
+    Parse(ParseArgs),
 }
+
+#[derive(Parser, Debug, Clone)]
+pub struct ParseArgs {}
 
 #[derive(Parser, Debug, Clone)]
 pub struct RunArgs {
