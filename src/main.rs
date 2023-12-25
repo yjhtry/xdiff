@@ -49,7 +49,7 @@ async fn parse() -> Result<()> {
     let req1: RequestProfile = url1.parse()?;
     let req2: RequestProfile = url2.parse()?;
     let profile = DiffProfile::new(req1, req2, skip_headers);
-    let config: DiffConfig = DiffConfig::new(vec![(profile_name, profile)]);
+    let config: DiffConfig = DiffConfig::new(vec![(profile_name, profile)].into_iter().collect());
 
     let output = serde_yaml::to_string(&config)?;
 

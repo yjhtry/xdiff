@@ -13,12 +13,7 @@ pub struct DiffConfig {
 }
 
 impl DiffConfig {
-    pub fn new(lists: Vec<(String, DiffProfile)>) -> Self {
-        let mut profiles = HashMap::new();
-        for (name, profile) in lists {
-            profiles.insert(name, profile);
-        }
-
+    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
         Self { profiles }
     }
     pub async fn load_yaml(path: &str) -> Result<Self> {
