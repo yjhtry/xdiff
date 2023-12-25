@@ -8,7 +8,7 @@ pub use config::{DiffConfig, DiffProfile, ResponseProfile};
 pub use req::RequestProfile;
 
 /// Represents additional arguments for the `xdiff` library.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ExtraArgs {
     headers: Vec<(String, String)>,
     body: Vec<(String, String)>,

@@ -18,9 +18,9 @@ pub struct RequestProfile {
     pub url: Url,
     #[serde(with = "http_serde::method", default)]
     pub method: Method,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(skip_serializing_if = "empty_json_value", default)]
     pub params: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(skip_serializing_if = "empty_json_value", default)]
     pub body: Option<serde_json::Value>,
     #[serde(
         with = "http_serde::header_map",
@@ -28,6 +28,11 @@ pub struct RequestProfile {
         default
     )]
     pub headers: HeaderMap,
+}
+
+fn empty_json_value(v: &Option<serde_json::Value>) -> bool {
+    v.as_ref()
+        .map_or(true, |v| v.is_null() || v.as_object().unwrap().is_empty())
 }
 
 impl RequestProfile {
@@ -139,6 +144,14 @@ impl ResponseExt {
         writeln!(&mut output)?;
 
         Ok(output)
+    }
+
+    pub fn get_headers(&self) -> Vec<String> {
+        self.0
+            .headers()
+            .keys()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
     }
 }
 

@@ -35,7 +35,13 @@ async fn parse() -> Result<()> {
         .with_prompt("Please enter profile name")
         .interact_text()?;
 
-    let header_options = ["set-cookie", "date", "via", "x-cache", "x-amz-cf-id"];
+    let req1: RequestProfile = url1.parse()?;
+    let req2: RequestProfile = url2.parse()?;
+
+    let res1 = req1.send(&ExtraArgs::default()).await?;
+    let res2 = req2.send(&ExtraArgs::default()).await?;
+
+    let header_options = [res1.get_headers(), res2.get_headers()].concat();
     let chosen = MultiSelect::with_theme(&theme)
         .with_prompt("Choose headers to skip")
         .items(&header_options)
@@ -46,15 +52,13 @@ async fn parse() -> Result<()> {
         .map(|&i| header_options[i].to_string())
         .collect::<Vec<_>>();
 
-    let req1: RequestProfile = url1.parse()?;
-    let req2: RequestProfile = url2.parse()?;
     let profile = DiffProfile::new(req1, req2, skip_headers);
     let config: DiffConfig = DiffConfig::new(vec![(profile_name, profile)].into_iter().collect());
 
     let output = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
-    writeln!(stdout, "{}", output)?;
+    writeln!(stdout, "------\n{}", output)?;
 
     Ok(())
 }
