@@ -157,7 +157,7 @@ impl ResponseExt {
 
 impl RequestProfile {
     pub async fn send(&self, extra: &ExtraArgs) -> Result<ResponseExt> {
-        let (headers, body, query) = self.generate(&extra)?;
+        let (headers, body, query) = self.generate(extra)?;
 
         let client = Client::new();
 
@@ -173,10 +173,7 @@ impl RequestProfile {
         Ok(ResponseExt(res))
     }
 
-    pub fn generate<'a>(
-        &self,
-        extra: &'a ExtraArgs,
-    ) -> Result<(HeaderMap, String, serde_json::Value)> {
+    pub fn generate(&self, extra: &ExtraArgs) -> Result<(HeaderMap, String, serde_json::Value)> {
         let mut headers: HeaderMap = self.headers.clone();
         let mut body = self.body.clone().unwrap_or_else(|| json!({}));
         let mut query = self.params.clone().unwrap_or_else(|| json!({}));
@@ -205,11 +202,11 @@ impl RequestProfile {
         match content_type.to_str()? {
             "application/json" => {
                 body = serde_json::to_value(&body)?;
-                return Ok((headers, body.to_string(), query));
+                Ok((headers, body.to_string(), query))
             }
             "application/x-www-form-urlencoded" => {
                 let body = serde_urlencoded::to_string(&body)?;
-                return Ok((headers, body, query));
+                Ok((headers, body, query))
             }
 
             _ => panic!("Unsupported content type: {:?}", content_type),

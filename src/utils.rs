@@ -4,6 +4,11 @@ use anyhow::Result;
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
 
+use syntect::easy::HighlightLines;
+use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
+use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
+
 struct Line(Option<usize>);
 
 impl fmt::Display for Line {
@@ -49,6 +54,24 @@ pub fn text_diff(text1: String, text2: String) -> Result<String> {
                 }
             }
         }
+    }
+
+    Ok(output)
+}
+
+pub fn highlight(text: &str) -> Result<String> {
+    let ps = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+
+    let syntax = ps.find_syntax_by_extension("yaml").unwrap();
+    let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+
+    let mut output = String::new();
+
+    for line in LinesWithEndings::from(text) {
+        let ranges = h.highlight_line(line, &ps)?;
+        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+        write!(output, "{}", escaped)?;
     }
 
     Ok(output)

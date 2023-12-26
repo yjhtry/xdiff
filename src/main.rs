@@ -5,6 +5,7 @@ use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use xdiff::{
     cli::{Action, Args, RunArgs},
+    utils::highlight,
     DiffConfig, DiffProfile, ExtraArgs, RequestProfile,
 };
 
@@ -58,7 +59,7 @@ async fn parse() -> Result<()> {
     let output = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
-    writeln!(stdout, "------\n{}", output)?;
+    writeln!(stdout, "------\n{}", highlight(&output)?)?;
 
     Ok(())
 }
