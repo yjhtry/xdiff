@@ -1,3 +1,11 @@
+use serde::{Deserialize, Serialize};
+
+pub mod xdiff;
+pub mod xreq;
+
+pub use xdiff::*;
+pub use xreq::*;
+
 use std::fmt::Write;
 use std::str::FromStr;
 
@@ -7,7 +15,6 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client, Method, Response,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use url::Url;
 
@@ -212,4 +219,26 @@ impl RequestProfile {
             _ => panic!("Unsupported content type: {:?}", content_type),
         }
     }
+}
+
+/// Represents a response profile.
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, Eq)]
+pub struct ResponseProfile {
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub skip_headers: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub skip_body: Vec<String>,
+}
+
+impl ResponseProfile {
+    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
+        Self {
+            skip_headers,
+            skip_body,
+        }
+    }
+}
+
+pub fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    value == &T::default()
 }

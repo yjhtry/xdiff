@@ -4,6 +4,10 @@
     "editor.formatOnSave": true
   },
   "cSpell.words": [
-    "xdiff"
+    "xdiff",
+    "xreq"
+  ],
+  "rust-analyzer.linkedProjects": [
+    "./Cargo.toml"
   ]
 }

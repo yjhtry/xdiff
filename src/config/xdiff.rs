@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;
 
+use super::{is_default, ResponseProfile};
 use crate::{utils::text_diff, ExtraArgs, RequestProfile};
 
 /// Represents the configuration for performing diffs.
@@ -52,10 +53,6 @@ pub struct DiffProfile {
     pub response: ResponseProfile,
 }
 
-fn is_default<T: Default + PartialEq>(value: &T) -> bool {
-    value == &T::default()
-}
-
 impl DiffProfile {
     pub fn new(
         request1: RequestProfile,
@@ -91,23 +88,5 @@ impl DiffProfile {
             .context("request2 failed to validate")?;
 
         Ok(())
-    }
-}
-
-/// Represents a response profile.
-#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, Eq)]
-pub struct ResponseProfile {
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub skip_headers: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub skip_body: Vec<String>,
-}
-
-impl ResponseProfile {
-    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
-        Self {
-            skip_headers,
-            skip_body,
-        }
     }
 }
