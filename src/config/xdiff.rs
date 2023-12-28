@@ -1,10 +1,8 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tokio::fs;
 
-use super::{is_default, ResponseProfile};
-use crate::{utils::text_diff, ExtraArgs, RequestProfile};
+use crate::{is_default, utils::text_diff, ExtraArgs, LoadYaml, RequestProfile, ResponseProfile};
 
 /// Represents the configuration for performing diffs.
 #[derive(Debug, Deserialize, Serialize)]
@@ -12,28 +10,18 @@ pub struct DiffConfig {
     #[serde(flatten)]
     pub profiles: HashMap<String, DiffProfile>,
 }
+impl LoadYaml for DiffConfig {}
 
 impl DiffConfig {
     pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
         Self { profiles }
-    }
-    pub async fn load_yaml(path: &str) -> Result<Self> {
-        let content = fs::read_to_string(path).await?;
-        Self::from_str(&content)
-    }
-
-    pub fn from_str(content: &str) -> Result<Self> {
-        let profiles: Self = serde_yaml::from_str(content)?;
-
-        profiles.validate()?;
-        Ok(profiles)
     }
 
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
         self.profiles.get(name)
     }
 
-    pub(crate) fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<()> {
         for (name, profile) in &self.profiles {
             profile
                 .validate()

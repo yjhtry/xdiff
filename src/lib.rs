@@ -3,7 +3,9 @@ pub mod cli;
 pub mod config;
 pub mod utils;
 
-pub use config::{DiffConfig, DiffProfile, RequestProfile, ResponseProfile};
+pub use config::{
+    is_default, DiffConfig, DiffProfile, LoadYaml, RequestProfile, ResponseExt, ResponseProfile,
+};
 
 /// Represents additional arguments for the `xdiff` library.
 #[derive(Debug, Default)]

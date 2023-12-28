@@ -11,14 +11,37 @@ use std::str::FromStr;
 
 /// Represents a request profile.
 use anyhow::Result;
+use async_trait::async_trait;
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client, Method, Response,
 };
 use serde_json::json;
+use tokio::fs;
 use url::Url;
 
 use crate::ExtraArgs;
+
+#[async_trait]
+pub trait LoadYaml {
+    async fn load_yaml(path: &str) -> Result<DiffConfig>
+    where
+        Self: Sized,
+    {
+        let content = fs::read_to_string(path).await?;
+        Self::from_yaml(&content)
+    }
+
+    fn from_yaml(content: &str) -> Result<DiffConfig>
+    where
+        Self: Sized,
+    {
+        let profiles: DiffConfig = serde_yaml::from_str(content)?;
+
+        profiles.validate()?;
+        Ok(profiles)
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RequestProfile {
@@ -35,11 +58,6 @@ pub struct RequestProfile {
         default
     )]
     pub headers: HeaderMap,
-}
-
-fn empty_json_value(v: &Option<serde_json::Value>) -> bool {
-    v.as_ref()
-        .map_or(true, |v| v.is_null() || v.as_object().unwrap().is_empty())
 }
 
 impl RequestProfile {
@@ -79,6 +97,67 @@ impl RequestProfile {
 
         Ok(())
     }
+    pub async fn send(&self, extra: &ExtraArgs) -> Result<ResponseExt> {
+        let (headers, body, query) = self.generate(extra)?;
+
+        let client = Client::new();
+
+        let request = client
+            .request(self.method.clone(), self.url.clone())
+            .headers(headers)
+            .body(body)
+            .query(&query)
+            .build()?;
+
+        let res = client.execute(request).await?;
+
+        Ok(ResponseExt(res))
+    }
+
+    pub fn generate(&self, extra: &ExtraArgs) -> Result<(HeaderMap, String, serde_json::Value)> {
+        let mut headers: HeaderMap = self.headers.clone();
+        let mut body = self.body.clone().unwrap_or_else(|| json!({}));
+        let mut query = self.params.clone().unwrap_or_else(|| json!({}));
+
+        if headers.get("content-type").is_none() {
+            headers.insert(
+                HeaderName::from_str("content-type")?,
+                HeaderValue::from_str("application/json")?,
+            );
+        }
+
+        for (key, value) in &extra.headers {
+            headers.insert(HeaderName::from_str(key)?, HeaderValue::from_str(value)?);
+        }
+
+        for (key, value) in &extra.body {
+            body[key] = json!(value);
+        }
+
+        for (key, value) in &extra.query {
+            query[key] = json!(value);
+        }
+
+        let content_type = headers.get("content-type").unwrap();
+
+        match content_type.to_str()? {
+            "application/json" => {
+                body = serde_json::to_value(&body)?;
+                Ok((headers, body.to_string(), query))
+            }
+            "application/x-www-form-urlencoded" => {
+                let body = serde_urlencoded::to_string(&body)?;
+                Ok((headers, body, query))
+            }
+
+            _ => panic!("Unsupported content type: {:?}", content_type),
+        }
+    }
+}
+
+fn empty_json_value(v: &Option<serde_json::Value>) -> bool {
+    v.as_ref()
+        .map_or(true, |v| v.is_null() || v.as_object().unwrap().is_empty())
 }
 
 impl FromStr for RequestProfile {
@@ -159,65 +238,6 @@ impl ResponseExt {
             .keys()
             .map(|v| v.to_string())
             .collect::<Vec<_>>()
-    }
-}
-
-impl RequestProfile {
-    pub async fn send(&self, extra: &ExtraArgs) -> Result<ResponseExt> {
-        let (headers, body, query) = self.generate(extra)?;
-
-        let client = Client::new();
-
-        let request = client
-            .request(self.method.clone(), self.url.clone())
-            .headers(headers)
-            .body(body)
-            .query(&query)
-            .build()?;
-
-        let res = client.execute(request).await?;
-
-        Ok(ResponseExt(res))
-    }
-
-    pub fn generate(&self, extra: &ExtraArgs) -> Result<(HeaderMap, String, serde_json::Value)> {
-        let mut headers: HeaderMap = self.headers.clone();
-        let mut body = self.body.clone().unwrap_or_else(|| json!({}));
-        let mut query = self.params.clone().unwrap_or_else(|| json!({}));
-
-        if headers.get("content-type").is_none() {
-            headers.insert(
-                HeaderName::from_str("content-type")?,
-                HeaderValue::from_str("application/json")?,
-            );
-        }
-
-        for (key, value) in &extra.headers {
-            headers.insert(HeaderName::from_str(key)?, HeaderValue::from_str(value)?);
-        }
-
-        for (key, value) in &extra.body {
-            body[key] = json!(value);
-        }
-
-        for (key, value) in &extra.query {
-            query[key] = json!(value);
-        }
-
-        let content_type = headers.get("content-type").unwrap();
-
-        match content_type.to_str()? {
-            "application/json" => {
-                body = serde_json::to_value(&body)?;
-                Ok((headers, body.to_string(), query))
-            }
-            "application/x-www-form-urlencoded" => {
-                let body = serde_urlencoded::to_string(&body)?;
-                Ok((headers, body, query))
-            }
-
-            _ => panic!("Unsupported content type: {:?}", content_type),
-        }
     }
 }
 

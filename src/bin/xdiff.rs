@@ -5,7 +5,7 @@ use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use xdiff::{
     cli::{parse_key_val, KeyVal},
     utils::highlight,
-    DiffConfig, DiffProfile, ExtraArgs, RequestProfile,
+    DiffConfig, DiffProfile, ExtraArgs, LoadYaml, RequestProfile,
 };
 
 use anyhow::{anyhow, Result};
