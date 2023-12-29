@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub mod xdiff;
 pub mod xreq;
@@ -23,8 +23,8 @@ use url::Url;
 use crate::ExtraArgs;
 
 #[async_trait]
-pub trait LoadYaml {
-    async fn load_yaml(path: &str) -> Result<DiffConfig>
+pub trait LoadYaml: Sized + ValidateConfig + DeserializeOwned {
+    async fn load_yaml(path: &str) -> Result<Self>
     where
         Self: Sized,
     {
@@ -32,15 +32,16 @@ pub trait LoadYaml {
         Self::from_yaml(&content)
     }
 
-    fn from_yaml(content: &str) -> Result<DiffConfig>
-    where
-        Self: Sized,
-    {
-        let profiles: DiffConfig = serde_yaml::from_str(content)?;
+    fn from_yaml(content: &str) -> Result<Self> {
+        let profiles: Self = serde_yaml::from_str(content)?;
 
         profiles.validate()?;
         Ok(profiles)
     }
+}
+
+pub trait ValidateConfig {
+    fn validate(&self) -> Result<()>;
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -60,23 +61,8 @@ pub struct RequestProfile {
     pub headers: HeaderMap,
 }
 
-impl RequestProfile {
-    pub fn new(
-        url: Url,
-        method: Method,
-        params: Option<serde_json::Value>,
-        body: Option<serde_json::Value>,
-        headers: HeaderMap,
-    ) -> Self {
-        RequestProfile {
-            url,
-            method,
-            params,
-            body,
-            headers,
-        }
-    }
-    pub fn validate(&self) -> Result<()> {
+impl ValidateConfig for RequestProfile {
+    fn validate(&self) -> Result<()> {
         if let Some(params) = &self.params {
             if !params.is_object() {
                 return Err(anyhow::anyhow!(
@@ -97,6 +83,25 @@ impl RequestProfile {
 
         Ok(())
     }
+}
+
+impl RequestProfile {
+    pub fn new(
+        url: Url,
+        method: Method,
+        params: Option<serde_json::Value>,
+        body: Option<serde_json::Value>,
+        headers: HeaderMap,
+    ) -> Self {
+        RequestProfile {
+            url,
+            method,
+            params,
+            body,
+            headers,
+        }
+    }
+
     pub async fn send(&self, extra: &ExtraArgs) -> Result<ResponseExt> {
         let (headers, body, query) = self.generate(extra)?;
 

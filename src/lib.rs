@@ -5,6 +5,7 @@ pub mod utils;
 
 pub use config::{
     is_default, DiffConfig, DiffProfile, LoadYaml, RequestProfile, ResponseExt, ResponseProfile,
+    ValidateConfig,
 };
 
 /// Represents additional arguments for the `xdiff` library.

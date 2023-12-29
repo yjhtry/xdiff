@@ -2,7 +2,10 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{is_default, utils::text_diff, ExtraArgs, LoadYaml, RequestProfile, ResponseProfile};
+use crate::{
+    is_default, utils::text_diff, ExtraArgs, LoadYaml, RequestProfile, ResponseProfile,
+    ValidateConfig,
+};
 
 /// Represents the configuration for performing diffs.
 #[derive(Debug, Deserialize, Serialize)]
@@ -12,16 +15,8 @@ pub struct DiffConfig {
 }
 impl LoadYaml for DiffConfig {}
 
-impl DiffConfig {
-    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
-        Self { profiles }
-    }
-
-    pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
-        self.profiles.get(name)
-    }
-
-    pub fn validate(&self) -> Result<()> {
+impl ValidateConfig for DiffConfig {
+    fn validate(&self) -> Result<()> {
         for (name, profile) in &self.profiles {
             profile
                 .validate()
@@ -32,6 +27,16 @@ impl DiffConfig {
     }
 }
 
+impl DiffConfig {
+    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
+        Self { profiles }
+    }
+
+    pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
+        self.profiles.get(name)
+    }
+}
+
 /// Represents a diff profile.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DiffProfile {
@@ -39,6 +44,19 @@ pub struct DiffProfile {
     pub request2: RequestProfile,
     #[serde(skip_serializing_if = "is_default", default)]
     pub response: ResponseProfile,
+}
+
+impl ValidateConfig for DiffProfile {
+    fn validate(&self) -> Result<()> {
+        self.request1
+            .validate()
+            .context("request1 failed to validate")?;
+        self.request2
+            .validate()
+            .context("request2 failed to validate")?;
+
+        Ok(())
+    }
 }
 
 impl DiffProfile {
@@ -65,16 +83,5 @@ impl DiffProfile {
             .await?;
 
         text_diff(text1, text2)
-    }
-
-    pub fn validate(&self) -> Result<()> {
-        self.request1
-            .validate()
-            .context("request1 failed to validate")?;
-        self.request2
-            .validate()
-            .context("request2 failed to validate")?;
-
-        Ok(())
     }
 }
