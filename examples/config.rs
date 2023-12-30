@@ -1,7 +1,7 @@
-use xdiff::DiffConfig;
+use xdiff::ReqConfig;
 
 fn main() {
-    let content = include_str!("../fixtures/test.yml");
-    let config: DiffConfig = serde_yaml::from_str(content).unwrap();
+    let content = include_str!("../fixtures/xreq.yml");
+    let config: ReqConfig = serde_yaml::from_str(content).unwrap();
     println!("{:#?}", config);
 }
