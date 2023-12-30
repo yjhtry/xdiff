@@ -1,6 +1,12 @@
-use anyhow::Result;
+use std::io::{stdout, Write};
+
+use anyhow::{anyhow, Result};
 use clap::Parser;
-use xdiff::cli::{parse_key_val, KeyVal};
+use xdiff::{
+    cli::{parse_key_val, KeyVal},
+    utils::highlight,
+    ExtraArgs, LoadYaml, ReqConfig,
+};
 
 #[derive(Debug, Parser, Clone)]
 #[clap(version, author, about, long_about)]
@@ -46,7 +52,26 @@ async fn main() -> Result<()> {
 }
 
 async fn run(args: RunArgs) -> Result<()> {
-    println!("run: {:?}", args);
+    let config_file = args.config.unwrap_or_else(|| "req.yaml".to_string());
+    let config = ReqConfig::load_yaml(&config_file).await?;
+    let profile = config.get_profile(&args.profile).ok_or_else(|| {
+        anyhow!(
+            "Profile {} not found in config file {}",
+            args.profile,
+            config_file
+        )
+    })?;
+    let extra_args = ExtraArgs::from(args.extra_params);
+
+    let res: xdiff::ResponseExt = profile.request.send(&extra_args).await?;
+    let output = res
+        .get_text(&profile.response.skip_headers, &profile.response.skip_body)
+        .await?;
+
+    let mut stdout = stdout().lock();
+
+    writeln!(stdout, "------\n{}", highlight(&output, "json")?)?;
+
     Ok(())
 }
 

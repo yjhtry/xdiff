@@ -59,11 +59,11 @@ pub fn text_diff(text1: String, text2: String) -> Result<String> {
     Ok(output)
 }
 
-pub fn highlight(text: &str) -> Result<String> {
+pub fn highlight(text: &str, language: &str) -> Result<String> {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
 
-    let syntax = ps.find_syntax_by_extension("yaml").unwrap();
+    let syntax = ps.find_syntax_by_extension(language).unwrap();
     let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
 
     let mut output = String::new();

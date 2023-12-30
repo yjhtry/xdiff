@@ -94,7 +94,7 @@ async fn parse() -> Result<()> {
     let output = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
-    writeln!(stdout, "------\n{}", highlight(&output)?)?;
+    writeln!(stdout, "------\n{}", highlight(&output, "yaml")?)?;
 
     Ok(())
 }
