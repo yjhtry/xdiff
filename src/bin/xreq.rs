@@ -2,10 +2,11 @@ use std::io::{stdout, Write};
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use xdiff::{
     cli::{parse_key_val, KeyVal},
     utils::highlight,
-    ExtraArgs, LoadYaml, ReqConfig,
+    ExtraArgs, LoadYaml, ReqConfig, ReqProfile, RequestProfile,
 };
 
 #[derive(Debug, Parser, Clone)]
@@ -47,7 +48,7 @@ async fn main() -> Result<()> {
 
     match args.action {
         Action::Run(args) => run(args).await,
-        Action::Parse(args) => parse(args).await,
+        Action::Parse(_) => parse().await,
     }
 }
 
@@ -75,8 +76,39 @@ async fn run(args: RunArgs) -> Result<()> {
     Ok(())
 }
 
-async fn parse(args: ParseArgs) -> Result<()> {
-    println!("parse: {:?}", args);
+async fn parse() -> Result<()> {
+    let theme = ColorfulTheme::default();
+    let url: String = Input::with_theme(&theme)
+        .with_prompt("Please enter url")
+        .interact_text()?;
+
+    let profile_name: String = Input::with_theme(&theme)
+        .with_prompt("Please enter profile name")
+        .interact_text()?;
+
+    let request: RequestProfile = url.parse()?;
+
+    let res = request.send(&ExtraArgs::default()).await?;
+
+    let header_options = res.get_headers();
+    let chosen = MultiSelect::with_theme(&theme)
+        .with_prompt("Choose headers to skip")
+        .items(&header_options)
+        .interact()?;
+
+    let skip_headers = chosen
+        .iter()
+        .map(|&i| header_options[i].to_string())
+        .collect::<Vec<_>>();
+
+    let profile = ReqProfile::new(request, skip_headers);
+
+    let config = ReqConfig::new(vec![(profile_name, profile)].into_iter().collect());
+
+    let output = serde_yaml::to_string(&config)?;
+
+    let mut stdout = stdout().lock();
+    writeln!(stdout, "------\n{}", highlight(&output, "yaml")?)?;
 
     Ok(())
 }
