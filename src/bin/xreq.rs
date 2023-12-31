@@ -1,6 +1,7 @@
 use std::io::{stdout, Write};
 
 use anyhow::{anyhow, Result};
+use atty::Stream;
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use xdiff::{
@@ -65,13 +66,21 @@ async fn run(args: RunArgs) -> Result<()> {
     let extra_args = ExtraArgs::from(args.extra_params);
 
     let res: xdiff::ResponseExt = profile.request.send(&extra_args).await?;
-    let output = res
-        .get_text(&profile.response.skip_headers, &profile.response.skip_body)
-        .await?;
+
+    let header_text = res.get_header_text(&profile.response.skip_headers)?;
+    let body_text = res.get_body_text(&profile.response.skip_body).await?;
 
     let mut stdout = stdout().lock();
 
-    writeln!(stdout, "------\n{}", highlight(&output, "json")?)?;
+    if atty::is(Stream::Stdout) {
+        writeln!(
+            stdout,
+            "------\n{}",
+            highlight(&format!("{}{}", header_text, body_text), "json")?
+        )?;
+    } else {
+        writeln!(stdout, "{}", body_text)?;
+    }
 
     Ok(())
 }

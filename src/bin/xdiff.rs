@@ -115,7 +115,7 @@ async fn run(args: RunArgs) -> Result<()> {
 
     let mut stdout = stdout().lock();
 
-    stdout.write_all(output.as_bytes())?;
+    writeln!(stdout, "------\n{}", output)?;
 
     Ok(())
 }

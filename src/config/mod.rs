@@ -192,7 +192,14 @@ pub struct ResponseExt(Response);
 
 impl ResponseExt {
     pub async fn get_text(self, skip_headers: &[String], skip_body: &[String]) -> Result<String> {
-        let mut output = self.get_header_text(skip_headers)?;
+        let header_text = self.get_header_text(skip_headers)?;
+        let body_text = self.get_body_text(skip_body).await?;
+
+        Ok(format!("{}{}", header_text, body_text))
+    }
+
+    pub async fn get_body_text(self, skip_body: &[String]) -> Result<String> {
+        let mut output = String::new();
         let is_json_content_type = self
             .0
             .headers()

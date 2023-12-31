@@ -1,6 +1,7 @@
 use std::fmt::{self, Write};
 
 use anyhow::Result;
+use atty::Stream;
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
 
@@ -60,6 +61,10 @@ pub fn text_diff(text1: String, text2: String) -> Result<String> {
 }
 
 pub fn highlight(text: &str, language: &str) -> Result<String> {
+    if !atty::is(Stream::Stdout) {
+        return Ok(text.to_string());
+    }
+
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
 
