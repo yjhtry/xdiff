@@ -1,6 +1,8 @@
-use std::fmt::{self, Write};
+use std::fmt;
+use std::fmt::Write as _;
+use std::io::Write as _;
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use atty::Stream;
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
@@ -80,4 +82,24 @@ pub fn highlight(text: &str, language: &str) -> Result<String> {
     }
 
     Ok(output)
+}
+
+pub fn process_error_output(result: Result<(), Error>) -> Result<()> {
+    match result {
+        Ok(_) => {}
+        Err(err) => {
+            let stdio = std::io::stdout();
+            if atty::is(Stream::Stdout) {
+                writeln!(
+                    &mut stdio.lock(),
+                    "{}",
+                    Style::new().red().apply_to(format!("Error: {:#}", err))
+                )?;
+            } else {
+                writeln!(&mut stdio.lock(), "Error: {}", err)?;
+            }
+        }
+    }
+
+    Ok(())
 }

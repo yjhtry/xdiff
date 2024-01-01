@@ -6,7 +6,7 @@ use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use xdiff::{
     cli::{parse_key_val, KeyVal},
-    utils::highlight,
+    utils::{highlight, process_error_output},
     ExtraArgs, LoadYaml, ReqConfig, ReqProfile, RequestProfile,
 };
 
@@ -47,10 +47,12 @@ pub struct ParseArgs {}
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    match args.action {
+    let result = match args.action {
         Action::Run(args) => run(args).await,
         Action::Parse(_) => parse().await,
-    }
+    };
+
+    process_error_output(result)
 }
 
 async fn run(args: RunArgs) -> Result<()> {
