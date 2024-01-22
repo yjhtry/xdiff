@@ -11,7 +11,6 @@ use std::str::FromStr;
 
 /// Represents a request profile.
 use anyhow::Result;
-use async_trait::async_trait;
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client, Method, Response,
@@ -22,7 +21,7 @@ use url::Url;
 
 use crate::ExtraArgs;
 
-#[async_trait]
+#[allow(async_fn_in_trait)]
 pub trait LoadYaml: Sized + ValidateConfig + DeserializeOwned {
     async fn load_yaml(path: &str) -> Result<Self>
     where
